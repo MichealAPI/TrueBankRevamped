@@ -16,7 +16,7 @@ public interface Repository<T> {
      * @param args Additional arguments for the save operation, strictly
      *             related to EntityStyle.
      */
-    String save(T obj, Object... args);
+    String save(T obj, @Deprecated Object... args);
 
     /**
      * Updates an object in the repository by its id.

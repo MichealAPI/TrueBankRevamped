@@ -37,7 +37,6 @@ public final class TrueBank extends JavaPlugin {
         this.cardRepository = new MongoDBRepository<>(mongoDBService, Card.class);
         cardRepository.setRepositoryName("posts");
 
-
         Card card = Card.builder()
                 .test(1)
                 .build();
@@ -62,6 +61,8 @@ public final class TrueBank extends JavaPlugin {
         System.out.println(card3.getTest());
 
         System.out.println("Done, next step...");
+
+
 
         this.cardTestRepository = new YamlRepository<>(this.getConfig(),
                                                        EntityStyle.INCREMENTAL,

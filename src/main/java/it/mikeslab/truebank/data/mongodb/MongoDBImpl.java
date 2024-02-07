@@ -94,20 +94,18 @@ public class MongoDBImpl implements MongoDBService {
 
     /**
      * Disconnects from the MongoDB server.
-     * @return True if the disconnection is successful, false otherwise.
      */
     @Override
-    public boolean disconnect() {
+    public void disconnect() {
 
         if (this.mongoClient != null) {
             this.mongoClient.close();
             this.mongoClient = null; // Preventing memory leaks
-            return true;
+            return;
         }
 
         // TODO: Implement a proper logging system
         System.err.println("The MongoDB client is already disconnected.");
-        return false;
     }
 
 
@@ -174,6 +172,12 @@ public class MongoDBImpl implements MongoDBService {
     }
 
 
+    /**
+     * Gets the collection for the MongoDB client.
+     * Each call to this method will return a new instance of the collection.
+     * @return The collection name.
+     */
+
     @Override
     public MongoCollection<Document> getCollection() {
         return this.mongoClient
@@ -181,6 +185,14 @@ public class MongoDBImpl implements MongoDBService {
                 .getCollection(this.collection);
     }
 
+
+    /**
+     * Saves an object to the MongoDB database.
+     * In this implementation, the first arg should contain the
+     * @param obj The object to be saved.
+     * @param args Additional arguments.
+     * @return The object's ID.
+     */
     @Override
     public String save(Object obj, Object... args) {
 
@@ -188,13 +200,22 @@ public class MongoDBImpl implements MongoDBService {
 
         Document document = toDocument(serializable);
 
-        // TODO: Check this functionality, not sure if it's correct
-
         this.getCollection().insertOne(document);
 
         return this.find(document, this.entityClass).getKey();
+
     }
 
+
+
+
+
+    /**
+     * Updates an object in the MongoDB database.
+     * @param id The object's ID.
+     * @param obj The object to be updated.
+     * @return The updated object.
+     */
     @Override
     public Map.Entry<String, Object> update(String id, Object obj) {
 
@@ -210,6 +231,14 @@ public class MongoDBImpl implements MongoDBService {
         return this.find(new Document("_id", id), this.entityClass);
     }
 
+
+
+
+
+    /**
+     * Deletes an object from the MongoDB database.
+     * @param id The object's ID.
+     */
     @Override
     public void delete(String id) {
 
@@ -217,6 +246,15 @@ public class MongoDBImpl implements MongoDBService {
 
     }
 
+
+
+
+    /**
+     * Finds an object in the MongoDB database.
+     * @param document The query document.
+     * @param clazz The object's class, it's projected for a POJO related utilize.
+     * @return The object.
+     */
     @Override
     public Map.Entry<String, Object> find(Document document, Class<?> clazz) {
         MongoCollection<Document> collection = this.getCollection();
@@ -235,6 +273,14 @@ public class MongoDBImpl implements MongoDBService {
     }
 
 
+
+
+
+    /**
+     * Converts a ConfigurationSerializable object to a Document.
+     * @param serializable The ConfigurationSerializable object.
+     * @return The Document instance.
+     */
     @Override
     public Document toDocument(ConfigurationSerializable serializable) {
 
@@ -250,19 +296,38 @@ public class MongoDBImpl implements MongoDBService {
         return theDocument;
     }
 
+
+
+
+
+    /**
+     * Gets the collection name.
+     * @return The collection name.
+     */
     @Override
     public String getCollectionName() {
         return this.collection;
     }
 
+
+
+
+    /**
+     * Sets the class for the MongoDB client.
+     * This implementation is though to be used with POJOs.
+     * @param clazz The desired class.
+     */
     @Override
     public void setClass(Class<?> clazz) {
         this.entityClass = clazz;
     }
 
+
+
+
     /**
      * Gets the connection to the MongoDB server.
-     * @return The MongoClient instance.
+     * @return The cached MongoClient instance.
      */
     @Override
     public MongoClient getConnection() {

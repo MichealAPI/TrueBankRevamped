@@ -19,7 +19,7 @@ public interface MongoDBService {
 
     void connect(URIBuilder connectionString);
 
-    boolean disconnect();
+    void disconnect();
 
     boolean isConnected(boolean silent);
     MongoClient getConnection();

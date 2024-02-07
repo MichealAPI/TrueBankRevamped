@@ -15,8 +15,10 @@ public class MongoDBRepository<T extends ConfigurationSerializable> implements R
     public MongoDBRepository(MongoDBService service, Class<T> type) {
         this.service = service;
 
+        // Set the type of the repository, strictly necessary and related to the POJO based approach
         this.setType(type);
     }
+
 
     @Override
     public String save(T obj, Object... args) {
@@ -50,6 +52,7 @@ public class MongoDBRepository<T extends ConfigurationSerializable> implements R
     public void delete(String id) {
         service.delete(id);
     }
+
 
     @Override
     public void setRepositoryName(String tableName) {
