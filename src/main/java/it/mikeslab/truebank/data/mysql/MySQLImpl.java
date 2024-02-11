@@ -80,16 +80,13 @@ public class MySQLImpl implements MySQLService {
 
     @Override
     public boolean isConnected(boolean silent) {
-        try {
-            boolean isConnected = this.sqlClient.isRunning();
-            if(!silent) {
-                System.out.println("Connection status: " + (isConnected ? "Connected" : "Disconnected"));
-            }
-            return isConnected;
-        } catch (Exception e) {
-            System.err.println(e); // Todo: Implement a proper logging system
-            return false;
+        boolean isConnected = this.sqlClient.isRunning();
+
+        if(!silent) {
+            System.out.println("Connection status: " + (isConnected ? "Connected" : "Disconnected"));
         }
+
+        return isConnected;
     }
 
 
@@ -141,9 +138,8 @@ public class MySQLImpl implements MySQLService {
         String sql = buildSqlString("INSERT INTO", document);
 
         try (Connection connection = this.sqlClient.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+             PreparedStatement statement = prepareStatement(connection, sql, document)) {
 
-            setParameters(statement, document);
             statement.executeUpdate();
 
             try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
@@ -154,7 +150,7 @@ public class MySQLImpl implements MySQLService {
                 }
             }
         } catch (SQLException e) {
-            System.err.println(e);
+            handleSQLException(e);
             return null;
         }
     }
@@ -215,29 +211,20 @@ public class MySQLImpl implements MySQLService {
      */
     @Override
     public Map.Entry<String, Object> find(String id) {
+        String sql = "SELECT * FROM " + this.table + " WHERE id = ?";
+
         try (Connection connection = this.sqlClient.getConnection();
-             PreparedStatement statement = connection.prepareStatement(
-                     "SELECT * FROM " + this.table + " WHERE id = ?")) {
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
             statement.setString(1, id);
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    ResultSetMetaData metaData = resultSet.getMetaData();
-                    int columnCount = metaData.getColumnCount();
-                    Document document = new Document();
-
-                    for (int i = 1; i <= columnCount; i++) {
-                        String columnName = metaData.getColumnName(i);
-                        Object value = resultSet.getObject(i);
-                        document.put(columnName, value);
-                    }
-
-                    ConfigurationSerializable serializable = fromDocument(document);
-                    return new AbstractMap.SimpleEntry<>(id, serializable);
+                    return mapResultSetToEntry(resultSet);
                 }
             }
         } catch (SQLException e) {
-            System.err.println("Error executing SQL query: " + e.getMessage());
+            handleSQLException(e);
         }
 
         return null;
@@ -312,5 +299,33 @@ public class MySQLImpl implements MySQLService {
         for (Object value : document.values()) {
             statement.setObject(index++, value);
         }
+    }
+
+    // Helper function to prepare a PreparedStatement
+    private PreparedStatement prepareStatement(Connection connection, String sql, Document document) throws SQLException {
+        PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
+        setParameters(statement, document);
+        return statement;
+    }
+
+    // Helper function to map a ResultSet to a Map.Entry
+    private Map.Entry<String, Object> mapResultSetToEntry(ResultSet resultSet) throws SQLException {
+        ResultSetMetaData metaData = resultSet.getMetaData();
+        int columnCount = metaData.getColumnCount();
+        Document document = new Document();
+
+        for (int i = 1; i <= columnCount; i++) {
+            String columnName = metaData.getColumnName(i);
+            Object value = resultSet.getObject(i);
+            document.put(columnName, value);
+        }
+
+        ConfigurationSerializable serializable = fromDocument(document);
+        return new AbstractMap.SimpleEntry<>(resultSet.getString("id"), serializable);
+    }
+
+    // Helper function to handle SQLException
+    private void handleSQLException(SQLException e) {
+        System.err.println("Error executing SQL query: " + e.getMessage());
     }
 }
