@@ -72,7 +72,7 @@ public class MongoDBImpl implements MongoDBService {
                 .codecRegistry(codecRegistry)
                 .serverApi(serverApi)
                 .build();
-
+        // redundant comment
 
         // Create a new client and connect to the server
 

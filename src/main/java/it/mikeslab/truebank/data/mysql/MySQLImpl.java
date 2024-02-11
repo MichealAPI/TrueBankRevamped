@@ -37,31 +37,19 @@ public class MySQLImpl implements MySQLService {
 
     @Override
     public void connect(URIBuilder uriBuilder) {
-
         HikariConfig config = new HikariConfig();
+        String jdbcUrl = new StringBuilder("jdbc:mysql://")
+                .append(uriBuilder.getHost())
+                .append(uriBuilder.getPort() != 0 ? ":" + uriBuilder.getPort() : "")
+                .append("/")
+                .append(uriBuilder.getDatabase())
+                .toString();
 
-        // JDBC URL needed in case of non-standard ports
-        StringBuilder jdbcUrl = new StringBuilder("jdbc:mysql://");
-        jdbcUrl.append(uriBuilder.getHost());
-
-        if (uriBuilder.getPort() != 0) {
-            jdbcUrl.append(":");
-            jdbcUrl.append(uriBuilder.getPort());
-        }
-
-        jdbcUrl.append("/");
-        jdbcUrl.append(uriBuilder.getDatabase());
-
-        config.setJdbcUrl(jdbcUrl.toString());
-
+        config.setJdbcUrl(jdbcUrl);
         config.setUsername(uriBuilder.getUsername());
-
-        if(uriBuilder.getPassword() != null) // todo: check if this is the right way to check for null
-            config.setPassword(uriBuilder.getPassword());
+        config.setPassword(Optional.ofNullable(uriBuilder.getPassword()).orElse(""));
 
         this.sqlClient = new HikariDataSource(config);
-
-        // TODO: If the connection fails, print an error message
     }
 
 
@@ -80,8 +68,7 @@ public class MySQLImpl implements MySQLService {
             return;
         }
 
-        // TODO: Implement a proper logging system
-        System.err.println("The MongoDB client is already disconnected.");
+        // todo implement proper logging
     }
 
 
@@ -151,29 +138,12 @@ public class MySQLImpl implements MySQLService {
         ConfigurationSerializable serializable = (ConfigurationSerializable) obj;
         Document document = toDocument(serializable);
 
-        StringBuilder columns = new StringBuilder();
-        StringBuilder values = new StringBuilder();
-        List<Object> parameters = new ArrayList<>();
-
-        for (Map.Entry<String, Object> entry : document.entrySet()) {
-            if (columns.length() > 0) {
-                columns.append(", ");
-                values.append(", ");
-            }
-            columns.append(entry.getKey());
-            values.append("?");
-            parameters.add(entry.getValue());
-        }
-
-        String sql = "INSERT INTO " + this.table + " (" + columns + ") VALUES (" + values + ")";
+        String sql = buildSqlString("INSERT INTO", document);
 
         try (Connection connection = this.sqlClient.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                statement.setObject(i + 1, parameters.get(i));
-            }
-
+            setParameters(statement, document);
             statement.executeUpdate();
 
             try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
@@ -204,28 +174,13 @@ public class MySQLImpl implements MySQLService {
         ConfigurationSerializable serializable = (ConfigurationSerializable) obj;
         Document document = toDocument(serializable);
 
-        StringBuilder setClause = new StringBuilder();
-        List<Object> parameters = new ArrayList<>();
-
-        for (Map.Entry<String, Object> entry : document.entrySet()) {
-            if (setClause.length() > 0) {
-                setClause.append(", ");
-            }
-            setClause.append(entry.getKey()).append(" = ?");
-            parameters.add(entry.getValue());
-        }
-
-        parameters.add(id); // Add id at the end of parameters
-
-        String sql = "UPDATE " + this.table + " SET " + setClause + " WHERE id = ?";
+        String sql = buildSqlString("UPDATE", document) + " WHERE id = ?";
 
         try (Connection connection = this.sqlClient.getConnection();
              PreparedStatement statement = connection.prepareStatement(sql)) {
 
-            for (int i = 0; i < parameters.size(); i++) {
-                statement.setObject(i + 1, parameters.get(i));
-            }
-
+            setParameters(statement, document);
+            statement.setString(document.size() + 1, id); // Set id at the end of parameters
             statement.executeUpdate();
         } catch (SQLException e) {
             System.err.println(e);
@@ -233,7 +188,6 @@ public class MySQLImpl implements MySQLService {
 
         return find(id);
     }
-
 
 
 
@@ -279,11 +233,6 @@ public class MySQLImpl implements MySQLService {
                     }
 
                     ConfigurationSerializable serializable = fromDocument(document);
-
-                    for(Map.Entry<String, Object> entry : document.entrySet()) {
-                        System.out.println(entry.getKey() + " : " + entry.getValue());
-                    }
-
                     return new AbstractMap.SimpleEntry<>(id, serializable);
                 }
             }
@@ -329,31 +278,13 @@ public class MySQLImpl implements MySQLService {
         return this.sqlClient;
     }
 
-    @Override // todo: add this in the service interface of mysql
+    @Override
     public ConfigurationSerializable fromDocument(Document document) {
 
         // Puts all the entries of the document into a new map
         Map<String, ?> map = new HashMap<>(document);
-        map.remove("id"); // Remove the id from the map, otherwise, entityClass which doesn't contain id will throw an exception
 
-        for(Map.Entry<String, ?> entry : map.entrySet()) {
-            System.out.println(entry.getKey() + " B: " + entry.getValue());
-        }
-
-
-        System.out.println("Entity class: " + this.entityClass.getName());
-        ConfigurationSerializable serializable = null;
-        try {
-            serializable = ConfigurationSerialization.deserializeObject(map, this.entityClass);
-
-            for (Map.Entry<String, Object> entry : serializable.serialize().entrySet()) {
-                System.out.println(entry.getKey() + " A: " + entry.getValue());
-            }
-        } catch (Exception e) {
-            System.err.println(e);
-        }
-
-        return serializable;
+        return ConfigurationSerialization.deserializeObject(map, this.entityClass);
     }
 
 
@@ -361,5 +292,25 @@ public class MySQLImpl implements MySQLService {
     @Override
     public Document toDocument(ConfigurationSerializable serializable) {
         return new Document(serializable.serialize());
+    }
+
+
+
+    // Helper function to build SQL query string
+    private String buildSqlString(String operation, Document document) {
+        StringBuilder sql = new StringBuilder(operation + " " + this.table + " SET ");
+        for (String key : document.keySet()) {
+            sql.append(key).append(" = ?, ");
+        }
+        sql.delete(sql.length() - 2, sql.length()); // Remove the last comma and space
+        return sql.toString();
+    }
+
+    // Helper function to set parameters of PreparedStatement
+    private void setParameters(PreparedStatement statement, Document document) throws SQLException {
+        int index = 1;
+        for (Object value : document.values()) {
+            statement.setObject(index++, value);
+        }
     }
 }
