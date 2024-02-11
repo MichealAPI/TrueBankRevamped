@@ -5,6 +5,9 @@ import it.mikeslab.truebank.data.Repository;
 import it.mikeslab.truebank.data.mongodb.MongoDBImpl;
 import it.mikeslab.truebank.data.mongodb.MongoDBRepository;
 import it.mikeslab.truebank.data.mongodb.MongoDBService;
+import it.mikeslab.truebank.data.mysql.MySQLImpl;
+import it.mikeslab.truebank.data.mysql.MySQLRepository;
+import it.mikeslab.truebank.data.mysql.MySQLService;
 import it.mikeslab.truebank.data.yaml.YamlRepository;
 import it.mikeslab.truebank.pojo.Card;
 import it.mikeslab.truebank.pojo.database.URIBuilder;
@@ -82,6 +85,32 @@ public final class TrueBank extends JavaPlugin {
         Card card5 = this.cardTestRepository.get(id3.toString());
 
         System.out.println(card5.getTest() + " from YamlRepository");
+
+        URIBuilder mySqlUriBuilder = URIBuilder.builder()
+                .username("root")
+                .host("localhost")
+                .port(3307)
+                .database("test")
+                .build();
+
+
+        MySQLService service = new MySQLImpl(mySqlUriBuilder);
+        this.cardRepository = new MySQLRepository<>(service, Card.class);
+
+        this.cardRepository.setRepositoryName("test");
+        this.cardRepository.setType(Card.class);
+
+        Card card6 = Card.builder()
+                .test(6)
+                .build();
+
+        String id4 = this.cardRepository.save(card6);
+
+        System.out.println(id4.toString() + " IDDDD from MySQLRepository");
+
+        Card card7 = this.cardRepository.get(id4);
+
+        System.out.println(card7.getTest() + " from MySQLRepository");
 
     }
 

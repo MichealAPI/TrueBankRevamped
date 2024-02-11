@@ -8,9 +8,7 @@ import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 
 import java.sql.*;
-import java.util.AbstractMap;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class MySQLImpl implements MySQLService {
 
@@ -41,10 +39,25 @@ public class MySQLImpl implements MySQLService {
     public void connect(URIBuilder uriBuilder) {
 
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:mysql://" + uriBuilder.getHost() + "/" + uriBuilder.getDatabase());
+
+        // JDBC URL needed in case of non-standard ports
+        StringBuilder jdbcUrl = new StringBuilder("jdbc:mysql://");
+        jdbcUrl.append(uriBuilder.getHost());
+
+        if (uriBuilder.getPort() != 0) {
+            jdbcUrl.append(":");
+            jdbcUrl.append(uriBuilder.getPort());
+        }
+
+        jdbcUrl.append("/");
+        jdbcUrl.append(uriBuilder.getDatabase());
+
+        config.setJdbcUrl(jdbcUrl.toString());
 
         config.setUsername(uriBuilder.getUsername());
-        config.setPassword(uriBuilder.getPassword());
+
+        if(uriBuilder.getPassword() != null) // todo: check if this is the right way to check for null
+            config.setPassword(uriBuilder.getPassword());
 
         this.sqlClient = new HikariDataSource(config);
 
@@ -137,14 +150,30 @@ public class MySQLImpl implements MySQLService {
     public String save(Object obj, Object... args) {
         ConfigurationSerializable serializable = (ConfigurationSerializable) obj;
         Document document = toDocument(serializable);
-        String json = document.toJson();
 
-        // todo generation style, different id/generation?
+        StringBuilder columns = new StringBuilder();
+        StringBuilder values = new StringBuilder();
+        List<Object> parameters = new ArrayList<>();
+
+        for (Map.Entry<String, Object> entry : document.entrySet()) {
+            if (columns.length() > 0) {
+                columns.append(", ");
+                values.append(", ");
+            }
+            columns.append(entry.getKey());
+            values.append("?");
+            parameters.add(entry.getValue());
+        }
+
+        String sql = "INSERT INTO " + this.table + " (" + columns + ") VALUES (" + values + ")";
 
         try (Connection connection = this.sqlClient.getConnection();
-             PreparedStatement statement = connection.prepareStatement(
-                     "INSERT INTO " + this.table + " (data) VALUES (?)", Statement.RETURN_GENERATED_KEYS)) {
-            statement.setString(1, json);
+             PreparedStatement statement = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                statement.setObject(i + 1, parameters.get(i));
+            }
+
             statement.executeUpdate();
 
             try (ResultSet generatedKeys = statement.getGeneratedKeys()) {
@@ -174,13 +203,29 @@ public class MySQLImpl implements MySQLService {
     public Map.Entry<String, Object> update(String id, Object obj) {
         ConfigurationSerializable serializable = (ConfigurationSerializable) obj;
         Document document = toDocument(serializable);
-        String json = document.toJson();
+
+        StringBuilder setClause = new StringBuilder();
+        List<Object> parameters = new ArrayList<>();
+
+        for (Map.Entry<String, Object> entry : document.entrySet()) {
+            if (setClause.length() > 0) {
+                setClause.append(", ");
+            }
+            setClause.append(entry.getKey()).append(" = ?");
+            parameters.add(entry.getValue());
+        }
+
+        parameters.add(id); // Add id at the end of parameters
+
+        String sql = "UPDATE " + this.table + " SET " + setClause + " WHERE id = ?";
 
         try (Connection connection = this.sqlClient.getConnection();
-             PreparedStatement statement = connection.prepareStatement(
-                     "UPDATE " + this.table + " SET data = ? WHERE id = ?")) {
-            statement.setString(1, json);
-            statement.setString(2, id);
+             PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            for (int i = 0; i < parameters.size(); i++) {
+                statement.setObject(i + 1, parameters.get(i));
+            }
+
             statement.executeUpdate();
         } catch (SQLException e) {
             System.err.println(e);
@@ -188,7 +233,6 @@ public class MySQLImpl implements MySQLService {
 
         return find(id);
     }
-
 
 
 
@@ -224,19 +268,31 @@ public class MySQLImpl implements MySQLService {
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {
-                    String json = resultSet.getString("data");
-                    Document document = Document.parse(json);
+                    ResultSetMetaData metaData = resultSet.getMetaData();
+                    int columnCount = metaData.getColumnCount();
+                    Document document = new Document();
+
+                    for (int i = 1; i <= columnCount; i++) {
+                        String columnName = metaData.getColumnName(i);
+                        Object value = resultSet.getObject(i);
+                        document.put(columnName, value);
+                    }
+
                     ConfigurationSerializable serializable = fromDocument(document);
+
+                    for(Map.Entry<String, Object> entry : document.entrySet()) {
+                        System.out.println(entry.getKey() + " : " + entry.getValue());
+                    }
+
                     return new AbstractMap.SimpleEntry<>(id, serializable);
                 }
             }
         } catch (SQLException e) {
-            System.err.println(e);
+            System.err.println("Error executing SQL query: " + e.getMessage());
         }
 
         return null;
     }
-
 
 
     /**
@@ -256,7 +312,7 @@ public class MySQLImpl implements MySQLService {
      * This implementation is though to be used with POJOs.
      * @param clazz The desired class.
      */
-    @Override //todo fix wildcard
+    @Override
     public void setClass(Class<? extends ConfigurationSerializable> clazz) {
         this.entityClass = clazz;
     }
@@ -275,9 +331,29 @@ public class MySQLImpl implements MySQLService {
 
     @Override // todo: add this in the service interface of mysql
     public ConfigurationSerializable fromDocument(Document document) {
-        Map<String, Object> map = new HashMap<>(document); // Puts all the entries of the document into a new map
 
-        return ConfigurationSerialization.deserializeObject(map, this.entityClass);
+        // Puts all the entries of the document into a new map
+        Map<String, ?> map = new HashMap<>(document);
+        map.remove("id"); // Remove the id from the map, otherwise, entityClass which doesn't contain id will throw an exception
+
+        for(Map.Entry<String, ?> entry : map.entrySet()) {
+            System.out.println(entry.getKey() + " B: " + entry.getValue());
+        }
+
+
+        System.out.println("Entity class: " + this.entityClass.getName());
+        ConfigurationSerializable serializable = null;
+        try {
+            serializable = ConfigurationSerialization.deserializeObject(map, this.entityClass);
+
+            for (Map.Entry<String, Object> entry : serializable.serialize().entrySet()) {
+                System.out.println(entry.getKey() + " A: " + entry.getValue());
+            }
+        } catch (Exception e) {
+            System.err.println(e);
+        }
+
+        return serializable;
     }
 
 

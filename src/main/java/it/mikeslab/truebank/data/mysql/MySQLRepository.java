@@ -37,9 +37,15 @@ public class MySQLRepository<T extends ConfigurationSerializable> implements Rep
 
         Map.Entry<String, Object> entryMap = service.find(id);
 
-        if (entryMap == null || !type.isInstance(entryMap.getValue())) {
+        // Removed !type.isInstance(entryMap.getValue()) from the if statement
+        // Since find method creates a new uncasted instance of a ConfigurationSerializable
+        // never instance of T, the check is always false
+
+        if (entryMap == null) {
+            System.out.println("entryMap is null or type is not instance of entryMap.getValue()");
             return null;
         }
+
 
         return type.cast(entryMap.getValue());
     }
