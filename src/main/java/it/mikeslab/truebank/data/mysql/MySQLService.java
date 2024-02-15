@@ -38,7 +38,7 @@ public interface MySQLService {
 
     Map.Entry<String, Object> update(String id, Object obj);
 
-    Map.Entry<String, Object> find(String id); // todo, here it needs just one param, it is probably doable also on the mongodb impl
+    Map.Entry<String, Object> find(String id);
 
     void delete(String id);
 

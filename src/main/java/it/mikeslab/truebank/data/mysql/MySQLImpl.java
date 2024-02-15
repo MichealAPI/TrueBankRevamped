@@ -29,9 +29,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Connects to the MongoDB server using the provided credentials.
-     * Reference: https://www.mongodb.com/docs/drivers/java/sync
-     *
+     * Connects to the MySQL server using the provided credentials.*
      * @param uriBuilder The connection string.
      */
 
@@ -57,7 +55,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Disconnects from the MongoDB server.
+     * Disconnects from the MySQL server.
      */
     @Override
     public void disconnect() {
@@ -73,7 +71,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Checks if the client is connected to the MongoDB server by sending a ping packet.
+     * Checks if the client is connected to the MySQL server by sending a ping packet.
      * @param silent If true, the method will not print any messages to the console.
      * @return Connection status.
      */
@@ -91,7 +89,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Sets the database for the MongoDB client.
+     * Sets the database for the MySQL client.
      * @param database The desired database name.
      */
     @Override
@@ -102,7 +100,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Sets the collection for the MongoDB client.
+     * Sets the collection for the MySQL client.
      * @param table The desired collection name.
      */
     @Override
@@ -112,7 +110,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Gets the collection for the MongoDB client.
+     * Gets the collection for the MySQL client.
      * Each call to this method will return a new instance of the collection.
      * @return The collection name.
      */
@@ -124,7 +122,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Saves an object to the MongoDB database.
+     * Saves an object to the MySQL database.
      * In this implementation, the first arg should contain the
      * @param obj The object to be saved.
      * @param args Additional arguments.
@@ -160,7 +158,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Updates an object in the MongoDB database.
+     * Updates an object in the MySQL database.
      * @param id The object's ID.
      * @param obj The object to be updated.
      * @return The updated object.
@@ -188,7 +186,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Deletes an object from the MongoDB database.
+     * Deletes an object from the MySQL database.
      * @param id The object's ID.
      */
     @Override
@@ -206,7 +204,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Finds an object in the MongoDB database.
+     * Finds an object in the MySQL database.
      * @return The object.
      */
     @Override
@@ -244,7 +242,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Sets the class for the MongoDB client.
+     * Sets the class for the MySQL client.
      * This implementation is though to be used with POJOs.
      * @param clazz The desired class.
      */
@@ -257,7 +255,7 @@ public class MySQLImpl implements MySQLService {
 
 
     /**
-     * Gets the connection to the MongoDB server.
+     * Gets the connection to the MySQL server.
      * @return The cached MongoClient instance.
      */
     @Override
