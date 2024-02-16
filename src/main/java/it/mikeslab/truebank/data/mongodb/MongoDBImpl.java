@@ -6,6 +6,7 @@ import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import it.mikeslab.truebank.pojo.database.URIBuilder;
+import it.mikeslab.truebank.util.LoggerUtil;
 import org.bson.BsonDocument;
 import org.bson.BsonInt64;
 import org.bson.Document;
@@ -15,6 +16,7 @@ import org.bson.conversions.Bson;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 
 import java.util.Map;
+import java.util.logging.Level;
 
 import static org.bson.codecs.configuration.CodecRegistries.fromProviders;
 import static org.bson.codecs.configuration.CodecRegistries.fromRegistries;
@@ -77,15 +79,11 @@ public class MongoDBImpl implements MongoDBService {
         // Create a new client and connect to the server
 
         this.mongoClient = MongoClients.create(settings);
-        if(isConnected(false)) {
 
-            // TODO: Implement a proper logging system,
-            //       here should be a message that the connection was successful
-
+        if(!isConnected(false)) {
+            LoggerUtil.log(Level.SEVERE, LoggerUtil.LogSource.DATABASE, "Failed to connect to MongoDB server.");
         }
 
-
-        // TODO: If the connection fails, print an error message
     }
 
 
@@ -104,8 +102,7 @@ public class MongoDBImpl implements MongoDBService {
             return;
         }
 
-        // TODO: Implement a proper logging system
-        System.err.println("The MongoDB client is already disconnected.");
+        LoggerUtil.log(Level.WARNING, LoggerUtil.LogSource.DATABASE, "The MongoDB client is already disconnected.");
     }
 
 
@@ -126,16 +123,15 @@ public class MongoDBImpl implements MongoDBService {
             Bson command = new BsonDocument("ping", new BsonInt64(1));
             Document commandResult = mongoDatabase.runCommand(command);
 
-            // TODO: Implement a proper logging system
+
             if(!silent) {
-                System.out.println("Pinged your deployment. You successfully connected to MongoDB!");
+                LoggerUtil.log(Level.INFO, LoggerUtil.LogSource.DATABASE, "MongoDB server pinged successfully!");
             }
 
             return true;
 
         } catch (MongoException me) {
-            // TODO: Implement a proper logging system
-            System.err.println(me);
+            LoggerUtil.log(Level.SEVERE, LoggerUtil.LogSource.DATABASE, me);
         }
 
         return false;

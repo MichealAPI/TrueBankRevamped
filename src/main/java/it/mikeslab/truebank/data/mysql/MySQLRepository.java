@@ -1,11 +1,13 @@
 package it.mikeslab.truebank.data.mysql;
 
 import it.mikeslab.truebank.data.Repository;
+import it.mikeslab.truebank.util.LoggerUtil;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 
 import java.util.Map;
+import java.util.logging.Level;
 
 public class MySQLRepository<T extends ConfigurationSerializable> implements Repository<T> {
 
@@ -42,7 +44,7 @@ public class MySQLRepository<T extends ConfigurationSerializable> implements Rep
         // never instance of T, the check is always false
 
         if (entryMap == null) {
-            System.out.println("entryMap is null or type is not instance of entryMap.getValue()");
+            LoggerUtil.log(Level.WARNING, LoggerUtil.LogSource.DATABASE, "(GET) MySQL entryMap is null or type is not instance of entryMap.getValue()");
             return null;
         }
 

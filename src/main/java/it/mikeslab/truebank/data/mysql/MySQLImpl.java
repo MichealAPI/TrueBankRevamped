@@ -3,12 +3,14 @@ package it.mikeslab.truebank.data.mysql;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import it.mikeslab.truebank.pojo.database.URIBuilder;
+import it.mikeslab.truebank.util.LoggerUtil;
 import org.bson.Document;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 
 import java.sql.*;
 import java.util.*;
+import java.util.logging.Level;
 
 public class MySQLImpl implements MySQLService {
 
@@ -66,7 +68,7 @@ public class MySQLImpl implements MySQLService {
             return;
         }
 
-        // todo implement proper logging
+        LoggerUtil.log(Level.INFO, LoggerUtil.LogSource.DATABASE, "The MySQL client disconnected.");
     }
 
 
@@ -81,7 +83,7 @@ public class MySQLImpl implements MySQLService {
         boolean isConnected = this.sqlClient.isRunning();
 
         if(!silent) {
-            System.out.println("Connection status: " + (isConnected ? "Connected" : "Disconnected"));
+            LoggerUtil.log(Level.INFO, LoggerUtil.LogSource.DATABASE, "Connection status: " + (isConnected ? "Connected" : "Disconnected"));
         }
 
         return isConnected;
@@ -144,13 +146,13 @@ public class MySQLImpl implements MySQLService {
                 if (generatedKeys.next()) {
                     return generatedKeys.getString(1);
                 } else {
-                    throw new SQLException("Creating item failed, no ID obtained.");
+                    LoggerUtil.log(Level.WARNING, LoggerUtil.LogSource.DATABASE, new SQLException("Creating item failed, no ID obtained."));
                 }
             }
         } catch (SQLException e) {
             handleSQLException(e);
-            return null;
         }
+        return null;
     }
 
 
@@ -324,6 +326,6 @@ public class MySQLImpl implements MySQLService {
 
     // Helper function to handle SQLException
     private void handleSQLException(SQLException e) {
-        System.err.println("Error executing SQL query: " + e.getMessage());
+        LoggerUtil.log(Level.SEVERE, LoggerUtil.LogSource.DATABASE, "Error executing SQL query: " + e.getMessage());
     }
 }
