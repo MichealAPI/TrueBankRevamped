@@ -89,26 +89,13 @@ public class YamlRepository<T extends ConfigurationSerializable> implements Repo
     @Override
     public Map.Entry<String, Object> find(Document document) {
         for (String key : configurationFile.getKeys(true)) {
+            if (configurationFile.isConfigurationSection(key)) continue;
 
-            if (!configurationFile.isConfigurationSection(key)) {
-                boolean match = true;
+            if (document.containsKey("id") && !document.get("id").equals(key)) continue;
 
-                if(document.containsKey("id") && !document.get("id").equals(key)) {
-                    continue;
-                }
+            if (document.entrySet().stream().anyMatch(entry -> !entry.getValue().equals(configurationFile.get(key + "." + entry.getKey())))) continue;
 
-
-                for (Map.Entry<String, Object> entry : document.entrySet()) {
-                    if (!entry.getValue().equals(configurationFile.get(key + "." + entry.getKey()))) {
-                        match = false;
-                        break;
-                    }
-                }
-
-                if (match) {
-                    return new AbstractMap.SimpleEntry<>(key, configurationFile.get(key));
-                }
-            }
+            return new AbstractMap.SimpleEntry<>(key, configurationFile.get(key));
         }
         return null;
     }
