@@ -9,7 +9,10 @@ import org.bukkit.configuration.serialization.ConfigurationSerializable;
 import org.bukkit.configuration.serialization.ConfigurationSerialization;
 
 import java.sql.*;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Level;
 
 public class MySQLImpl implements MySQLService {
@@ -131,7 +134,7 @@ public class MySQLImpl implements MySQLService {
      * @return The object's ID.
      */
     @Override
-    public String save(Object obj, Object... args) {
+    public String save(Object obj, Object... args) { // TODO: Urgent!! This is ambiguous, args should contain the Id, if not, it should increment a default incremental strategy
         ConfigurationSerializable serializable = (ConfigurationSerializable) obj;
         Document document = toDocument(serializable);
 
@@ -182,7 +185,7 @@ public class MySQLImpl implements MySQLService {
             System.err.println(e);
         }
 
-        return find(id);
+        return find(new Document("id", id));
     }
 
 
@@ -199,7 +202,7 @@ public class MySQLImpl implements MySQLService {
             statement.setString(1, id);
             statement.executeUpdate();
         } catch (SQLException e) {
-            System.err.println(e);
+            LoggerUtil.log(Level.SEVERE, LoggerUtil.LogSource.DATABASE, e);
         }
     }
 
@@ -210,13 +213,23 @@ public class MySQLImpl implements MySQLService {
      * @return The object.
      */
     @Override
-    public Map.Entry<String, Object> find(String id) {
-        String sql = "SELECT * FROM " + this.table + " WHERE id = ?";
+    public Map.Entry<String, Object> find(Document document) {
+        StringBuilder sql = new StringBuilder("SELECT * FROM " + this.table + " WHERE ");
+        int index = 1;
+        for (String key : document.keySet()) {
+            sql.append(key).append(" = ? AND ");
+            index++;
+        }
+        sql.delete(sql.length() - 5, sql.length()); // Remove the last " AND "
 
         try (Connection connection = this.sqlClient.getConnection();
-             PreparedStatement statement = connection.prepareStatement(sql)) {
+             PreparedStatement statement = connection.prepareStatement(sql.toString())) {
 
-            statement.setString(1, id);
+            index = 1;
+            for (Object value : document.values()) {
+                statement.setObject(index, value);
+                index++;
+            }
 
             try (ResultSet resultSet = statement.executeQuery()) {
                 if (resultSet.next()) {

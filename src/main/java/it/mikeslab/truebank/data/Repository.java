@@ -1,5 +1,9 @@
 package it.mikeslab.truebank.data;
 
+import org.bson.Document;
+
+import java.util.Map;
+
 /**
  * Generic Repository Interface.
  * Author: Michele C.
@@ -41,6 +45,10 @@ public interface Repository<T> {
      */
 
     T get(String id);
+
+
+    Map.Entry<String, Object> find(Document document);
+
 
     /**
      * Sets the repository name for the repository.

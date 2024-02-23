@@ -37,10 +37,10 @@ public class MySQLRepository<T extends ConfigurationSerializable> implements Rep
 
         // todo, analyze this int string conversion problem in find, be careful. Id should be also alphanumeric occasionally
 
-        Map.Entry<String, Object> entryMap = service.find(id);
+        Map.Entry<String, Object> entryMap = service.find(new Document("id", new ObjectId(id)));
 
         // Removed !type.isInstance(entryMap.getValue()) from the if statement
-        // Since find method creates a new uncasted instance of a ConfigurationSerializable
+        // Since find method creates a new un-casted instance of a ConfigurationSerializable
         // never instance of T, the check is always false
 
         if (entryMap == null) {
@@ -50,6 +50,11 @@ public class MySQLRepository<T extends ConfigurationSerializable> implements Rep
 
 
         return type.cast(entryMap.getValue());
+    }
+
+    @Override
+    public Map.Entry<String, Object> find(Document document) {
+        return service.find(document);
     }
 
 

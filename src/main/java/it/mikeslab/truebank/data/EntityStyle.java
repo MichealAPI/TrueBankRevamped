@@ -4,5 +4,6 @@ public enum EntityStyle {
 
     INCREMENTAL,
     UUID,
+    CUSTOM;
 
 }

@@ -253,6 +253,14 @@ public class MongoDBImpl implements MongoDBService {
      */
     @Override
     public Map.Entry<String, Object> find(Document document, Class<?> clazz) {
+
+        // IDs in MongoDB are stored as "_id", so we need to convert an eventual id key to "_id"
+        if (document.containsKey("id")) {
+            document.put("_id", document.get("id"));
+            document.remove("id");
+        }
+
+
         MongoCollection<Document> collection = this.getCollection();
 
         Document theDocument = collection
@@ -265,7 +273,7 @@ public class MongoDBImpl implements MongoDBService {
 
         String id = theDocument.getObjectId("_id").toString();
 
-        return Map.entry(id, collection.find(theDocument, clazz).first());
+        return Map.entry(id, collection.find(theDocument, clazz).first()); // todo fix content null
     }
 
 

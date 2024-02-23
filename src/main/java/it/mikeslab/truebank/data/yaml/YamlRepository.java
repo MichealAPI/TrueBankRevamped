@@ -2,12 +2,17 @@ package it.mikeslab.truebank.data.yaml;
 
 import it.mikeslab.truebank.data.EntityStyle;
 import it.mikeslab.truebank.data.Repository;
+import it.mikeslab.truebank.util.LoggerUtil;
 import lombok.RequiredArgsConstructor;
+import org.bson.Document;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.serialization.ConfigurationSerializable;
 
 import java.io.File;
+import java.util.AbstractMap;
+import java.util.Map;
 import java.util.UUID;
+import java.util.logging.Level;
 
 @RequiredArgsConstructor
 public class YamlRepository<T extends ConfigurationSerializable> implements Repository<T> {
@@ -32,14 +37,17 @@ public class YamlRepository<T extends ConfigurationSerializable> implements Repo
                 configurationFile.set(repositoryName + "." + userUUID, obj);
                 key = userUUID.toString();
                 break;
-
-            case INCREMENTAL:
-
+            case CUSTOM:
+                key = (String) args[0];
+                configurationFile.set(repositoryName + "." + key, obj);
+                break;
+            default:
+                // Incremental, default behavior
                 if(!configurationFile.isConfigurationSection(repositoryName)) {
                     configurationFile.createSection(repositoryName);
                 }
 
-
+                // Get the size of the configuration section
                 dataSize = configurationFile
                         .getConfigurationSection(repositoryName)
                         .getKeys(false)
@@ -79,6 +87,33 @@ public class YamlRepository<T extends ConfigurationSerializable> implements Repo
     }
 
     @Override
+    public Map.Entry<String, Object> find(Document document) {
+        for (String key : configurationFile.getKeys(true)) {
+
+            if (!configurationFile.isConfigurationSection(key)) {
+                boolean match = true;
+
+                if(document.containsKey("id") && !document.get("id").equals(key)) {
+                    continue;
+                }
+
+
+                for (Map.Entry<String, Object> entry : document.entrySet()) {
+                    if (!entry.getValue().equals(configurationFile.get(key + "." + entry.getKey()))) {
+                        match = false;
+                        break;
+                    }
+                }
+
+                if (match) {
+                    return new AbstractMap.SimpleEntry<>(key, configurationFile.get(key));
+                }
+            }
+        }
+        return null;
+    }
+
+    @Override
     public void setRepositoryName(String repositoryName) {
         this.repositoryName = repositoryName;
     }
@@ -104,7 +139,7 @@ public class YamlRepository<T extends ConfigurationSerializable> implements Repo
         try {
             configurationFile.save(configFile);
         } catch (Exception e) {
-            e.printStackTrace(); // TODO: Replace with a more robust logging system
+            LoggerUtil.log(Level.SEVERE, LoggerUtil.LogSource.DATABASE, e);
         }
     }
 

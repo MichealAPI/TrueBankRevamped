@@ -1,123 +1,37 @@
 package it.mikeslab.truebank;
 
-import it.mikeslab.truebank.data.EntityStyle;
 import it.mikeslab.truebank.data.Repository;
-import it.mikeslab.truebank.data.mongodb.MongoDBImpl;
-import it.mikeslab.truebank.data.mongodb.MongoDBRepository;
-import it.mikeslab.truebank.data.mongodb.MongoDBService;
-import it.mikeslab.truebank.data.mysql.MySQLImpl;
-import it.mikeslab.truebank.data.mysql.MySQLRepository;
-import it.mikeslab.truebank.data.mysql.MySQLService;
-import it.mikeslab.truebank.data.yaml.YamlRepository;
 import it.mikeslab.truebank.pojo.Card;
-import it.mikeslab.truebank.pojo.database.URIBuilder;
-import org.bson.types.ObjectId;
+import it.mikeslab.truebank.util.RepositoryUtil;
+import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
-
-import java.io.File;
 
 public final class TrueBank extends JavaPlugin {
 
-    private Repository<Card> cardRepository;
 
-    private Repository<Card> cardTestRepository;
 
     @Override
     public void onEnable() {
         // Plugin startup logic
         saveDefaultConfig();
 
-        URIBuilder uriBuilder = URIBuilder.builder()
-                .username("mikeslab")
-                .password("mikeslab")
-                .host("cluster0.mqkev3k.mongodb.net")
-                .port(27017)
-                .database("blog")
-                .build();
+        ConfigurationSection cardConfig = getConfig().getConfigurationSection("cardDb");
 
-        MongoDBService mongoDBService = new MongoDBImpl(uriBuilder);
+        Repository<Card> testRepo = new RepositoryUtil<>(
+                cardConfig,
+                Card.class,
+                "card-database"
+        ).fromConfig();
 
-        this.cardRepository = new MongoDBRepository<>(mongoDBService, Card.class);
-        cardRepository.setRepositoryName("posts");
+        testRepo.setRepositoryName("card-database");
 
-        Card card = Card.builder()
-                .test(1)
-                .build();
+        testRepo.save(new Card(122112, "test3t"));
 
-        String id = cardRepository.save(card);
-
-        Card card1 = cardRepository.get(id.toString());
-
-        System.out.println(card1.getTest());
-
-
-        cardRepository.setRepositoryName("comments");
-
-        Card card2 = Card.builder()
-                .test(2)
-                .build();
-
-        String id2 = cardRepository.save(card2);
-
-        Card card3 = cardRepository.get(id2.toString());
-
-        System.out.println(card3.getTest());
-
-        System.out.println("Done, next step...");
-
-
-
-        this.cardTestRepository = new YamlRepository<>(this.getConfig(),
-                                                       EntityStyle.INCREMENTAL,
-                                                       new File(this.getDataFolder(), "config.yml"));
-
-        this.cardTestRepository.setRepositoryName("cards");
-        this.cardTestRepository.setType(Card.class);
-
-        Card card4 = Card.builder()
-                .test(3)
-                .build();
-
-
-        String id3 = this.cardTestRepository.save(card4);
-
-        System.out.println(id3.toString() + " IDDDD from YamlRepository");
-        Card card5 = this.cardTestRepository.get(id3.toString());
-
-        System.out.println(card5.getTest() + " from YamlRepository");
-
-        URIBuilder mySqlUriBuilder = URIBuilder.builder()
-                .username("root")
-                .host("localhost")
-                .port(3307)
-                .database("test")
-                .build();
-
-
-        MySQLService service = new MySQLImpl(mySqlUriBuilder);
-        this.cardRepository = new MySQLRepository<>(service, Card.class);
-
-        this.cardRepository.setRepositoryName("test");
-        this.cardRepository.setType(Card.class);
-
-        Card card6 = Card.builder()
-                .test(6)
-                .build();
-
-        String id4 = this.cardRepository.save(card6);
-
-        System.out.println(id4.toString() + " IDDDD from MySQLRepository");
-
-        Card card7 = this.cardRepository.get(id4);
-
-        System.out.println(card7.getTest() + " from MySQLRepository");
 
     }
 
     @Override
     public void onDisable() {
-
-        cardRepository.close(); // Close the repository, disconnect from the database for example
 
     }
 }

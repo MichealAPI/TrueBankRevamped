@@ -1,0 +1,7 @@
+cardDb:
+  type: MONGODB
+  username: mikeslab
+  password: mikeslab
+  host: cluster0.mqkev3k.mongodb.net
+  port: 27017
+  database: blog

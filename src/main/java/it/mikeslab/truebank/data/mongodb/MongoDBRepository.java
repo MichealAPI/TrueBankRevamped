@@ -42,6 +42,11 @@ public class MongoDBRepository<T extends ConfigurationSerializable> implements R
         return type.cast(entryMap.getValue());
     }
 
+    @Override
+    public Map.Entry<String, Object> find(Document document) {
+        return service.find(document, type);
+    }
+
 
     @Override
     public void update(String id, T obj) {

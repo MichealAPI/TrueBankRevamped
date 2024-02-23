@@ -1,5 +1,6 @@
 package it.mikeslab.truebank.pojo.database;
 
+import it.mikeslab.truebank.data.EntityStyle;
 import lombok.Builder;
 import lombok.Data;
 
@@ -12,5 +13,7 @@ public class URIBuilder {
 
     // Optionals, need to be set after the builder
     private String database;
+    private String path;
+    private EntityStyle style;
 
 }

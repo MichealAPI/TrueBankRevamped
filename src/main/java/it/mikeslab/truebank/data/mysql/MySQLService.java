@@ -1,8 +1,5 @@
 package it.mikeslab.truebank.data.mysql;
 
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
 import com.zaxxer.hikari.HikariDataSource;
 import it.mikeslab.truebank.pojo.database.URIBuilder;
 import org.bson.Document;
@@ -38,7 +35,7 @@ public interface MySQLService {
 
     Map.Entry<String, Object> update(String id, Object obj);
 
-    Map.Entry<String, Object> find(String id);
+    Map.Entry<String, Object> find(Document document);
 
     void delete(String id);
 
